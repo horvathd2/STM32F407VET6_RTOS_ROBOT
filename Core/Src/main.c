@@ -167,7 +167,7 @@ int main(void)
   MX_TIM2_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_DMA(&huart1, rxBuf, RX_LEN);
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -685,15 +685,15 @@ void delay_us(uint32_t us){
 }
 
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        sscanf((char*)rxBuf, "%ld/%ld", &setpoint1, &setpoint2);
-
-        HAL_UART_Receive_DMA(&huart1, rxBuf, RX_LEN);
-    }
-}
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+//{
+//    if (huart->Instance == USART1)
+//    {
+//        sscanf((char*)rxBuf, "%ld/%ld", &setpoint1, &setpoint2);
+//
+//        HAL_UART_Receive_DMA(&huart1, rxBuf, RX_LEN);
+//    }
+//}
 
 
 /* USER CODE END 4 */
