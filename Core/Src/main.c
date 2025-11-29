@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -26,6 +27,8 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
+typedef StaticSemaphore_t osStaticMutexDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -42,12 +45,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-
-CAN_HandleTypeDef hcan1;
+DMA_HandleTypeDef hdma_adc1;
 
 CRC_HandleTypeDef hcrc;
-
-I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -55,34 +55,49 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim7;
 
-UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_rx;
-
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
+/* Definitions for main_thread */
+osThreadId_t main_threadHandle;
+uint32_t mainTaskBuffer[ 128 ];
+osStaticThreadDef_t mainTaskControlBlock;
+const osThreadAttr_t main_thread_attributes = {
+  .name = "main_thread",
+  .cb_mem = &mainTaskControlBlock,
+  .cb_size = sizeof(mainTaskControlBlock),
+  .stack_mem = &mainTaskBuffer[0],
+  .stack_size = sizeof(mainTaskBuffer),
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for PWM_thread */
 osThreadId_t PWM_threadHandle;
+uint32_t PWM_threadBuffer[ 128 ];
+osStaticThreadDef_t PWM_threadControlBlock;
 const osThreadAttr_t PWM_thread_attributes = {
   .name = "PWM_thread",
-  .stack_size = 128 * 4,
+  .cb_mem = &PWM_threadControlBlock,
+  .cb_size = sizeof(PWM_threadControlBlock),
+  .stack_mem = &PWM_threadBuffer[0],
+  .stack_size = sizeof(PWM_threadBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for UART_thread */
-osThreadId_t UART_threadHandle;
-const osThreadAttr_t UART_thread_attributes = {
-  .name = "UART_thread",
-  .stack_size = 128 * 4,
+/* Definitions for USB_thread */
+osThreadId_t USB_threadHandle;
+uint32_t UART_threadBuffer[ 128 ];
+osStaticThreadDef_t UART_threadControlBlock;
+const osThreadAttr_t USB_thread_attributes = {
+  .name = "USB_thread",
+  .cb_mem = &UART_threadControlBlock,
+  .cb_size = sizeof(UART_threadControlBlock),
+  .stack_mem = &UART_threadBuffer[0],
+  .stack_size = sizeof(UART_threadBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for uart_mutex */
-osMutexId_t uart_mutexHandle;
-const osMutexAttr_t uart_mutex_attributes = {
-  .name = "uart_mutex"
+/* Definitions for setpoint_mutex */
+osMutexId_t setpoint_mutexHandle;
+osStaticMutexDef_t setpoint_mutexControlBlock;
+const osMutexAttr_t setpoint_mutex_attributes = {
+  .name = "setpoint_mutex",
+  .cb_mem = &setpoint_mutexControlBlock,
+  .cb_size = sizeof(setpoint_mutexControlBlock),
 };
 /* USER CODE BEGIN PV */
 
@@ -93,18 +108,15 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_CRC_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_CAN1_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
-void StartDefaultTask(void *argument);
-void main2_pwm(void *argument);
-void main_uart(void *argument);
+void main_task(void *argument);
+void pwm_task(void *argument);
+void usb_task(void *argument);
 
 /* USER CODE BEGIN PFP */
 void delay_us(uint32_t us);
@@ -148,9 +160,6 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_CRC_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
-  MX_CAN1_Init();
   MX_TIM7_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
@@ -164,8 +173,8 @@ int main(void)
   /* Init scheduler */
   osKernelInitialize();
   /* Create the mutex(es) */
-  /* creation of uart_mutex */
-  uart_mutexHandle = osMutexNew(&uart_mutex_attributes);
+  /* creation of setpoint_mutex */
+  setpoint_mutexHandle = osMutexNew(&setpoint_mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -184,14 +193,14 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of main_thread */
+  main_threadHandle = osThreadNew(main_task, NULL, &main_thread_attributes);
 
   /* creation of PWM_thread */
-  PWM_threadHandle = osThreadNew(main2_pwm, NULL, &PWM_thread_attributes);
+  PWM_threadHandle = osThreadNew(pwm_task, NULL, &PWM_thread_attributes);
 
-  /* creation of UART_thread */
-  UART_threadHandle = osThreadNew(main_uart, NULL, &UART_thread_attributes);
+  /* creation of USB_thread */
+  USB_threadHandle = osThreadNew(usb_task, NULL, &USB_thread_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -239,9 +248,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLN = 72;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 3;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -253,10 +262,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -285,13 +294,13 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 3;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -308,46 +317,25 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN ADC1_Init 2 */
 
-  /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief CAN1 Initialization Function
-  * @param None
-  * @retval None
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-static void MX_CAN1_Init(void)
-{
-
-  /* USER CODE BEGIN CAN1_Init 0 */
-
-  /* USER CODE END CAN1_Init 0 */
-
-  /* USER CODE BEGIN CAN1_Init 1 */
-
-  /* USER CODE END CAN1_Init 1 */
-  hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
-  hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
-  hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
-  hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
-  hcan1.Init.ReceiveFifoLocked = DISABLE;
-  hcan1.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan1) != HAL_OK)
+  sConfig.Rank = 2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN CAN1_Init 2 */
 
-  /* USER CODE END CAN1_Init 2 */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Rank = 3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
 
 }
 
@@ -374,40 +362,6 @@ static void MX_CRC_Init(void)
   /* USER CODE BEGIN CRC_Init 2 */
 
   /* USER CODE END CRC_Init 2 */
-
-}
-
-/**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 400000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
 
 }
 
@@ -674,39 +628,6 @@ static void MX_TIM7_Init(void)
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -716,9 +637,9 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA2_Stream2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
 
@@ -777,15 +698,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_main_task */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the mainTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_main_task */
+void main_task(void *argument)
 {
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
 	HAL_TIM_Base_Start(&htim7); // delay_us timer
 
@@ -856,43 +779,40 @@ void StartDefaultTask(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_main2_pwm */
+/* USER CODE BEGIN Header_pwm_task */
 /**
 * @brief Function implementing the PWM_thread thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_main2_pwm */
-void main2_pwm(void *argument)
+/* USER CODE END Header_pwm_task */
+void pwm_task(void *argument)
 {
-  /* USER CODE BEGIN main2_pwm */
+  /* USER CODE BEGIN pwm_task */
   /* Infinite loop */
   for(;;)
   {
-	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);  // Toggle LED
-	  osDelay(500);
+    osDelay(1);
   }
-  /* USER CODE END main2_pwm */
+  /* USER CODE END pwm_task */
 }
 
-/* USER CODE BEGIN Header_main_uart */
+/* USER CODE BEGIN Header_usb_task */
 /**
-* @brief Function implementing the UART_thread thread.
+* @brief Function implementing the USB_thread thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_main_uart */
-void main_uart(void *argument)
+/* USER CODE END Header_usb_task */
+void usb_task(void *argument)
 {
-  /* USER CODE BEGIN main_uart */
-
+  /* USER CODE BEGIN usb_task */
   /* Infinite loop */
   for(;;)
   {
-	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_7);  // Toggle LED
-	  osDelay(1000);
+    osDelay(1);
   }
-  /* USER CODE END main_uart */
+  /* USER CODE END usb_task */
 }
 
 /**
