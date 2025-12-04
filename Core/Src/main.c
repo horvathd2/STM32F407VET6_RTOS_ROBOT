@@ -673,6 +673,7 @@ void main_task(void *argument)
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
   /* Infinite loop */
   for(;;)
   {
