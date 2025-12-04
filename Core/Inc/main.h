@@ -33,6 +33,8 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "usb_packet.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

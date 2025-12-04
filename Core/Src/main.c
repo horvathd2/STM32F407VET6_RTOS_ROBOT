@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "usb_packet.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,8 +46,6 @@ typedef StaticSemaphore_t osStaticMutexDef_t;
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
-
-CRC_HandleTypeDef hcrc;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -79,18 +77,6 @@ const osThreadAttr_t PWM_thread_attributes = {
   .stack_size = sizeof(PWM_threadBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for USB_thread */
-osThreadId_t USB_threadHandle;
-uint32_t UART_threadBuffer[ 128 ];
-osStaticThreadDef_t UART_threadControlBlock;
-const osThreadAttr_t USB_thread_attributes = {
-  .name = "USB_thread",
-  .cb_mem = &UART_threadControlBlock,
-  .cb_size = sizeof(UART_threadControlBlock),
-  .stack_mem = &UART_threadBuffer[0],
-  .stack_size = sizeof(UART_threadBuffer),
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for setpoint_mutex */
 osMutexId_t setpoint_mutexHandle;
 osStaticMutexDef_t setpoint_mutexControlBlock;
@@ -107,7 +93,6 @@ const osMutexAttr_t setpoint_mutex_attributes = {
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_CRC_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
@@ -116,7 +101,6 @@ static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
 void main_task(void *argument);
 void pwm_task(void *argument);
-void usb_task(void *argument);
 
 /* USER CODE BEGIN PFP */
 void delay_us(uint32_t us);
@@ -124,8 +108,6 @@ void delay_us(uint32_t us);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#define RX_LEN 32
-uint8_t rxBuf[RX_LEN];
 int32_t setpoint1, setpoint2;
 /* USER CODE END 0 */
 
@@ -159,7 +141,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_CRC_Init();
   MX_TIM7_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
@@ -198,9 +179,6 @@ int main(void)
 
   /* creation of PWM_thread */
   PWM_threadHandle = osThreadNew(pwm_task, NULL, &PWM_thread_attributes);
-
-  /* creation of USB_thread */
-  USB_threadHandle = osThreadNew(usb_task, NULL, &USB_thread_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -336,32 +314,6 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief CRC Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_CRC_Init(void)
-{
-
-  /* USER CODE BEGIN CRC_Init 0 */
-
-  /* USER CODE END CRC_Init 0 */
-
-  /* USER CODE BEGIN CRC_Init 1 */
-
-  /* USER CODE END CRC_Init 1 */
-  hcrc.Instance = CRC;
-  if (HAL_CRC_Init(&hcrc) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN CRC_Init 2 */
-
-  /* USER CODE END CRC_Init 2 */
 
 }
 
@@ -684,18 +636,6 @@ void delay_us(uint32_t us){
 	while (__HAL_TIM_GET_COUNTER(&htim7) < us);
 }
 
-
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//    if (huart->Instance == USART1)
-//    {
-//        sscanf((char*)rxBuf, "%ld/%ld", &setpoint1, &setpoint2);
-//
-//        HAL_UART_Receive_DMA(&huart1, rxBuf, RX_LEN);
-//    }
-//}
-
-
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_main_task */
@@ -710,22 +650,22 @@ void main_task(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
-	HAL_TIM_Base_Start(&htim7); // delay_us timer
-
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //MOTOR 2 PWM
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); //MOTOR 1 PWM
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-
-    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1); //MOTOR 2 ENCODER
-    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_2);
-
-    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); //MOTOR 1 ENCODER
-    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_2);
-
-    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1); //ROTARY ENCODER
-    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_2);
+//	HAL_TIM_Base_Start(&htim7); // delay_us timer
+//
+//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //MOTOR 2 PWM
+//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+//
+//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); //MOTOR 1 PWM
+//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+//
+//    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1); //MOTOR 2 ENCODER
+//    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_2);
+//
+//    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); //MOTOR 1 ENCODER
+//    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_2);
+//
+//    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1); //ROTARY ENCODER
+//    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_2);
 //
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
@@ -733,10 +673,11 @@ void main_task(void *argument)
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
 //    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
   /* Infinite loop */
   for(;;)
   {
-
+	  /*
 	  int16_t motor1_ticks = __HAL_TIM_GET_COUNTER(&htim3);
 
 	  int32_t p_error = setpoint1 - motor1_ticks;
@@ -755,24 +696,12 @@ void main_task(void *argument)
 		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
 		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
 	  }
-//
-//	    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 1999);
-//	    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-
-	  /*
-	  int16_t rot_enc_ticks = __HAL_TIM_GET_COUNTER(&htim4);
-	  if(rot_enc_ticks >= 1665) rot_enc_ticks = 1665;
-	  if(rot_enc_ticks <= -1665) rot_enc_ticks = -1665;
-	  if(rot_enc_ticks > 0){
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, abs(rot_enc_ticks));
-	  }else{
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, abs(rot_enc_ticks));
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-	  }*/
+	  */
 
 	  //uint8_t temp, hum, res;
 	  //res = DHT_ReadData(&temp, &hum);
+	  if(active_packet.cmd == CMD_CONN) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+	  else if(active_packet.cmd == CMD_DISC) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 
 	  osDelay(10);
   }
@@ -792,27 +721,10 @@ void pwm_task(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
+	  osDelay(500);
   }
   /* USER CODE END pwm_task */
-}
-
-/* USER CODE BEGIN Header_usb_task */
-/**
-* @brief Function implementing the USB_thread thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_usb_task */
-void usb_task(void *argument)
-{
-  /* USER CODE BEGIN usb_task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END usb_task */
 }
 
 /**
