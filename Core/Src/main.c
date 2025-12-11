@@ -28,7 +28,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 typedef StaticTask_t osStaticThreadDef_t;
-typedef StaticSemaphore_t osStaticMutexDef_t;
+typedef StaticQueue_t osStaticMessageQDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -77,13 +77,16 @@ const osThreadAttr_t PWM_thread_attributes = {
   .stack_size = sizeof(PWM_threadBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for setpoint_mutex */
-osMutexId_t setpoint_mutexHandle;
-osStaticMutexDef_t setpoint_mutexControlBlock;
-const osMutexAttr_t setpoint_mutex_attributes = {
-  .name = "setpoint_mutex",
-  .cb_mem = &setpoint_mutexControlBlock,
-  .cb_size = sizeof(setpoint_mutexControlBlock),
+/* Definitions for USB_queue */
+osMessageQueueId_t USB_queueHandle;
+uint8_t USB_queueBuffer[ 16 * sizeof( uint16_t ) ];
+osStaticMessageQDef_t USB_queueControlBlock;
+const osMessageQueueAttr_t USB_queue_attributes = {
+  .name = "USB_queue",
+  .cb_mem = &USB_queueControlBlock,
+  .cb_size = sizeof(USB_queueControlBlock),
+  .mq_mem = &USB_queueBuffer,
+  .mq_size = sizeof(USB_queueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -148,14 +151,17 @@ int main(void)
   MX_TIM2_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  motor dc_motor1 = init_motor((GPIO_motor){GPIOE, 13}, (GPIO_motor){GPIOE, 14},
+		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
+							   0.1, 0.5, 1);
 
+  motor dc_motor2 = init_motor((GPIO_motor){GPIOE, 9}, (GPIO_motor){GPIOE, 11},
+  		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
+  							   0.1, 0.5, 1);
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
-  /* Create the mutex(es) */
-  /* creation of setpoint_mutex */
-  setpoint_mutexHandle = osMutexNew(&setpoint_mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -168,6 +174,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
+
+  /* Create the queue(s) */
+  /* creation of USB_queue */
+  USB_queueHandle = osMessageQueueNew (16, sizeof(uint16_t), &USB_queue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

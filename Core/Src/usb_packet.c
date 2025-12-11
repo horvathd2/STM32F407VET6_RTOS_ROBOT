@@ -8,3 +8,5 @@
 #include "usb_packet.h"
 
 volatile SetpointPacket active_packet = {0};
+uint8_t rxBuffer[64];
+uint8_t rxIndex = 0;

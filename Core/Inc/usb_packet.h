@@ -34,5 +34,7 @@ typedef enum {
 } CommandType;
 
 extern volatile SetpointPacket active_packet;
+extern uint8_t rxBuffer[64];
+extern uint8_t rxIndex;
 
 #endif /* INC_USB_PACKET_H_ */
