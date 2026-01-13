@@ -22,7 +22,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "cmsis_os2.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,7 +109,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+extern osMessageQueueId_t USBqueueHandle;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -271,9 +271,17 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 
 		if(rxIndex == PACKET_SIZE)
 		{
-			__disable_irq();
-			memcpy((void*)&active_packet, (void*)rxBuffer, PACKET_SIZE);
-			__enable_irq();
+			SetpointPacket irq_packet;
+			memcpy((void*)&irqPacket, (void*)rxBuffer, PACKET_SIZE);
+			osStatus_t queue_status = osMessageQueuePut(USBqueueHandle, &irq_packet, 0, 0);
+
+			//if (queue_status != osOK) {
+			    // handle full queue (drop packet or set a flag)
+			//}
+
+			//__disable_irq();
+			//memcpy((void*)&active_packet, (void*)rxBuffer, PACKET_SIZE);
+			//__enable_irq();
 			rxIndex = 0;
 		}
 

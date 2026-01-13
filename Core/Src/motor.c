@@ -15,10 +15,10 @@ motor init_motor(GPIO_motor pwm_pin1,
 	dc_motor.motor_pid.ki = ki;
 	dc_motor.motor_pid.current_pos = encoder;
 
-	dc_motor.pwm_pin1.gpio_port = pwm_pin1;
-	dc_motor.pwm_pin2.gpio_port = pwm_pin2;
-	dc_motor.en_pin1.gpio_port = en_pin1;
-	dc_motor.en_pin2.gpio_port = en_pin2;
+	dc_motor.pwm_pin1 = pwm_pin1;
+	dc_motor.pwm_pin2 = pwm_pin2;
+	dc_motor.en_pin1 = en_pin1;
+	dc_motor.en_pin2 = en_pin2;
 
 	return dc_motor;
 }

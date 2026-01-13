@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usb_packet.h"
+#include "motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,16 +78,16 @@ const osThreadAttr_t PWM_thread_attributes = {
   .stack_size = sizeof(PWM_threadBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for USB_queue */
-osMessageQueueId_t USB_queueHandle;
-uint8_t USB_queueBuffer[ 16 * sizeof( uint16_t ) ];
-osStaticMessageQDef_t USB_queueControlBlock;
-const osMessageQueueAttr_t USB_queue_attributes = {
-  .name = "USB_queue",
-  .cb_mem = &USB_queueControlBlock,
-  .cb_size = sizeof(USB_queueControlBlock),
-  .mq_mem = &USB_queueBuffer,
-  .mq_size = sizeof(USB_queueBuffer)
+/* Definitions for USBqueue */
+osMessageQueueId_t USBqueueHandle;
+uint8_t USBqueueBuffer[ 8 * 11 ];
+osStaticMessageQDef_t USBqueueControlBlock;
+const osMessageQueueAttr_t USBqueue_attributes = {
+  .name = "USBqueue",
+  .cb_mem = &USBqueueControlBlock,
+  .cb_size = sizeof(USBqueueControlBlock),
+  .mq_mem = &USBqueueBuffer,
+  .mq_size = sizeof(USBqueueBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -153,11 +154,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   motor dc_motor1 = init_motor((GPIO_motor){GPIOE, 13}, (GPIO_motor){GPIOE, 14},
 		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-							   0.1, 0.5, 1);
+							   NULL, 0.1, 0.5, 1);
 
   motor dc_motor2 = init_motor((GPIO_motor){GPIOE, 9}, (GPIO_motor){GPIOE, 11},
   		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-  							   0.1, 0.5, 1);
+  							   NULL, 0.1, 0.5, 1);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -176,8 +177,8 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
-  /* creation of USB_queue */
-  USB_queueHandle = osMessageQueueNew (16, sizeof(uint16_t), &USB_queue_attributes);
+  /* creation of USBqueue */
+  USBqueueHandle = osMessageQueueNew (8, 11, &USBqueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -687,6 +688,7 @@ void main_task(void *argument)
   /* Infinite loop */
   for(;;)
   {
+	  osStatus_t queue_status = osMessageQueueGet(USBqueueHandle, &active_packet, 0, 0);
 	  /*
 	  int16_t motor1_ticks = __HAL_TIM_GET_COUNTER(&htim3);
 
@@ -713,7 +715,8 @@ void main_task(void *argument)
 	  if(active_packet.cmd == CMD_CONN) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
 	  else if(active_packet.cmd == CMD_DISC) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 
-	  osDelay(10);
+	  //osDelay(10);
+	  osDelayUntil(60);
   }
   /* USER CODE END 5 */
 }
