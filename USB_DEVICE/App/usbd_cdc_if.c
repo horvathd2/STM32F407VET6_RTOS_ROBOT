@@ -272,7 +272,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 		if(rxIndex == PACKET_SIZE)
 		{
 			SetpointPacket irq_packet;
-			memcpy((void*)&irqPacket, (void*)rxBuffer, PACKET_SIZE);
+			memcpy((void*)&irq_packet, (void*)rxBuffer, PACKET_SIZE);
 			osStatus_t queue_status = osMessageQueuePut(USBqueueHandle, &irq_packet, 0, 0);
 
 			//if (queue_status != osOK) {

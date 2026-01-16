@@ -152,13 +152,17 @@ int main(void)
   MX_TIM2_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  motor dc_motor1 = init_motor((GPIO_motor){GPIOE, 13}, (GPIO_motor){GPIOE, 14},
-		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-							   NULL, 0.1, 0.5, 1);
+  motor dc_motor1 = init_motor(&htim1, TIM_CHANNEL_3, TIM_CHANNEL_4,
+		  	  	  	  	  	   (GPIO_motor){GPIOE, 13}, (GPIO_motor){GPIOE, 14},
+		  	  	  	  	       &htim3, TIM_CHANNEL_1, TIM_CHANNEL_2,
+							   (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
+							   0.1, 0.5, 1);
 
-  motor dc_motor2 = init_motor((GPIO_motor){GPIOE, 9}, (GPIO_motor){GPIOE, 11},
-  		  	  	  	  	       (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-  							   NULL, 0.1, 0.5, 1);
+  motor dc_motor2 = init_motor(&htim1, TIM_CHANNEL_1, TIM_CHANNEL_2,
+		  	  	  	  	  	   (GPIO_motor){GPIOE, 9}, (GPIO_motor){GPIOE, 11},
+							   &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2,
+							   (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
+  							   0.1, 0.5, 1);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -661,8 +665,8 @@ void main_task(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
-//	HAL_TIM_Base_Start(&htim7); // delay_us timer
-//
+	HAL_TIM_Base_Start(&htim7); // delay_us timer
+
 //	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //MOTOR 2 PWM
 //	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 //
@@ -674,7 +678,7 @@ void main_task(void *argument)
 //
 //    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); //MOTOR 1 ENCODER
 //    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_2);
-//
+
 //    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1); //ROTARY ENCODER
 //    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_2);
 //
@@ -689,6 +693,7 @@ void main_task(void *argument)
   for(;;)
   {
 	  osStatus_t queue_status = osMessageQueueGet(USBqueueHandle, &active_packet, 0, 0);
+
 	  /*
 	  int16_t motor1_ticks = __HAL_TIM_GET_COUNTER(&htim3);
 
@@ -715,8 +720,8 @@ void main_task(void *argument)
 	  if(active_packet.cmd == CMD_CONN) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
 	  else if(active_packet.cmd == CMD_DISC) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 
-	  //osDelay(10);
-	  osDelayUntil(60);
+	  osDelay(10);
+	  //osDelayUntil(60);
   }
   /* USER CODE END 5 */
 }
