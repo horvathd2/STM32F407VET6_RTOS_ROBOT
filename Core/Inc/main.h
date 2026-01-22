@@ -33,8 +33,6 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include <stdlib.h>
 #include <stdio.h>
-
-#include "usb_packet.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -58,7 +56,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void delay_us(TIM_HandleTypeDef *htim_delay, uint32_t us);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -76,10 +74,6 @@ void Error_Handler(void);
 #define MOT1_PWM_TIM1CH3_GPIO_Port GPIOE
 #define MOT1_PWM_TIM1CH4_Pin GPIO_PIN_14
 #define MOT1_PWM_TIM1CH4_GPIO_Port GPIOE
-#define ROT_ENC_TIM4CH1_Pin GPIO_PIN_12
-#define ROT_ENC_TIM4CH1_GPIO_Port GPIOD
-#define ROT_ENC_TIM4CH2_Pin GPIO_PIN_13
-#define ROT_ENC_TIM4CH2_GPIO_Port GPIOD
 #define MOT1_ENC_TIM3CH1_Pin GPIO_PIN_6
 #define MOT1_ENC_TIM3CH1_GPIO_Port GPIOC
 #define MOT1_ENC_TIM3CH2_Pin GPIO_PIN_7

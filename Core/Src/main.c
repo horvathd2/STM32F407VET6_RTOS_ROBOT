@@ -51,7 +51,6 @@ DMA_HandleTypeDef hdma_adc1;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim7;
 
 /* Definitions for main_thread */
@@ -100,19 +99,18 @@ static void MX_DMA_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
 void main_task(void *argument);
 void pwm_task(void *argument);
 
 /* USER CODE BEGIN PFP */
-void delay_us(uint32_t us);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int32_t setpoint1, setpoint2;
+
 /* USER CODE END 0 */
 
 /**
@@ -148,21 +146,10 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM3_Init();
   MX_TIM1_Init();
-  MX_TIM4_Init();
   MX_TIM2_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  motor dc_motor1 = init_motor(&htim1, TIM_CHANNEL_3, TIM_CHANNEL_4,
-		  	  	  	  	  	   (GPIO_motor){GPIOE, 13}, (GPIO_motor){GPIOE, 14},
-		  	  	  	  	       &htim3, TIM_CHANNEL_1, TIM_CHANNEL_2,
-							   (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-							   0.1, 0.5, 1);
 
-  motor dc_motor2 = init_motor(&htim1, TIM_CHANNEL_1, TIM_CHANNEL_2,
-		  	  	  	  	  	   (GPIO_motor){GPIOE, 9}, (GPIO_motor){GPIOE, 11},
-							   &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2,
-							   (GPIO_motor){0, 0}, (GPIO_motor){0, 0},
-  							   0.1, 0.5, 1);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -433,7 +420,7 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -482,7 +469,7 @@ static void MX_TIM3_Init(void)
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
@@ -504,55 +491,6 @@ static void MX_TIM3_Init(void)
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
-
-}
-
-/**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_Encoder_InitTypeDef sConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 0;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 65535;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
-  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
-  if (HAL_TIM_Encoder_Init(&htim4, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
 
 }
 
@@ -626,7 +564,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
@@ -646,9 +583,9 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void delay_us(uint32_t us){
-	__HAL_TIM_SET_COUNTER(&htim7,0);  // set the counter value a 0
-	while (__HAL_TIM_GET_COUNTER(&htim7) < us);
+void delay_us(TIM_HandleTypeDef *htim_delay, uint32_t us){
+	__HAL_TIM_SET_COUNTER(htim_delay,0);  // set the counter value a 0
+	while (__HAL_TIM_GET_COUNTER(htim_delay) < us);
 }
 
 /* USER CODE END 4 */
@@ -662,31 +599,18 @@ void delay_us(uint32_t us){
 /* USER CODE END Header_main_task */
 void main_task(void *argument)
 {
-  /* init code for USB_DEVICE */
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
+	/* init code for USB_DEVICE */
+	MX_USB_DEVICE_Init();
+	  /* USER CODE BEGIN 5 */
 	HAL_TIM_Base_Start(&htim7); // delay_us timer
 
-//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1); //MOTOR 2 PWM
-//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-//
-//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3); //MOTOR 1 PWM
-//	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-//
-//    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1); //MOTOR 2 ENCODER
-//    HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_2);
-//
-//    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_1); //MOTOR 1 ENCODER
-//    HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_2);
+	motor dc_motor1 = init_motor(&htim1, TIM_CHANNEL_3, TIM_CHANNEL_4,
+			  	  	  	  	     &htim3, TIM_CHANNEL_1, TIM_CHANNEL_2,
+								 0.1, 0.5, 1);
 
-//    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_1); //ROTARY ENCODER
-//    HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_2);
-//
-//    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-//    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-//
-//    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-//    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+//	motor dc_motor2 = init_motor(&htim1, TIM_CHANNEL_1, TIM_CHANNEL_2,
+//								 &htim2, TIM_CHANNEL_1, TIM_CHANNEL_2,
+//	  							 0.1, 0.5, 1);
 
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
   /* Infinite loop */
@@ -694,31 +618,10 @@ void main_task(void *argument)
   {
 	  osStatus_t queue_status = osMessageQueueGet(USBqueueHandle, &active_packet, 0, 0);
 
-	  /*
-	  int16_t motor1_ticks = __HAL_TIM_GET_COUNTER(&htim3);
-
-	  int32_t p_error = setpoint1 - motor1_ticks;
-
-	  float Kp = 0.8;
-	  int32_t m1_pwm = abs(p_error) * Kp;
-	  if (m1_pwm > 999) m1_pwm = 999;
-
-	  if(p_error > 100){
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, abs(m1_pwm));
-	  }else if (p_error < -100){
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, abs(m1_pwm));
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-	  }else{
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-		  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-	  }
-	  */
-
-	  //uint8_t temp, hum, res;
-	  //res = DHT_ReadData(&temp, &hum);
 	  if(active_packet.cmd == CMD_CONN) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
 	  else if(active_packet.cmd == CMD_DISC) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
+
+	  move_abs_motor(&dc_motor1, active_packet.sp1);
 
 	  osDelay(10);
 	  //osDelayUntil(60);

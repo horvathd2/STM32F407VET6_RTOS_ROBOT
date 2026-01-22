@@ -23,6 +23,7 @@
 
 /* USER CODE BEGIN INCLUDE */
 #include "cmsis_os2.h"
+#include "usb_packet.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/

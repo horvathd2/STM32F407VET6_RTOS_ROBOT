@@ -4,6 +4,8 @@
 #include "stdint.h"
 #include "stm32f4xx_hal.h"
 
+#define MIN_POS_DELTA 10
+
 typedef struct{
 	GPIO_TypeDef *gpio_port;
 	uint8_t gpio_pin;
@@ -19,21 +21,18 @@ typedef struct{
 	int32_t setpoint;
 	int32_t current_pos;
 	int32_t prev_error;
-	int32_t last_pos;
 }PID;
 
-typedef struct Motor{
+typedef struct{
 	TIM_HandleTypeDef *htim_pwm;
 	TIM_HandleTypeDef *htim_enc;
-	PID motor_pid;
-	GPIO_motor pwm_pin1;	//MAY BE REDUNDANT
-	GPIO_motor pwm_pin2;	//MAY BE REDUNDANT
-	GPIO_motor en_pin1;		//MAY BE REDUNDANT
-	GPIO_motor en_pin2;		//MAY BE REDUNDANT
+	PID pid_pos;
 	uint32_t pwm_tim_channel1;
 	uint32_t pwm_tim_channel2;
 	uint32_t enc_tim_channel1;
 	uint32_t enc_tim_channel2;
+	int16_t last_pos;
+	uint16_t max_speed;
 	float current_draw;
 	uint8_t pwm_signal;
 }motor;
@@ -41,18 +40,15 @@ typedef struct Motor{
 motor init_motor(TIM_HandleTypeDef *htim_pwm,
 				 uint32_t pwm_tim_channel1,
 				 uint32_t pwm_tim_channel2,
-				 GPIO_motor pwm_pin1,
-				 GPIO_motor pwm_pin2,
 				 TIM_HandleTypeDef *htim_enc,
 				 uint32_t enc_tim_channel1,
 				 uint32_t enc_tim_channel2,
-				 GPIO_motor en_pin1,
-				 GPIO_motor en_pin2,
 				 double kp, double ki, double kd);
 
-float compute_pid(motor *motor);
+int16_t encoder_delta(motor *motor);
+
+void compute_pid(motor *motor, PID *pid);
 
 void move_abs_motor(motor *motor,
-				    int32_t setpoint,
-					int32_t currentpos);
+				    int32_t setpoint);
 #endif

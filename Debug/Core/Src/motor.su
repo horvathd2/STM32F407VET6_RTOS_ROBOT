@@ -1,3 +1,7 @@
-../Core/Src/motor.c:4:7:init_motor	320	static
-../Core/Src/motor.c:26:7:compute_pid	16	static
-../Core/Src/motor.c:31:6:move_abs_motor	16	static
+../Core/Src/motor.c:7:7:init_motor	168	static
+../Core/Src/motor.c:49:9:encoder_delta	24	static
+../Core/Src/motor.c:59:6:compute_pid	32	static
+../Core/Src/motor.c:81:20:fwd	16	static
+../Core/Src/motor.c:88:20:bwd	16	static
+../Core/Src/motor.c:95:20:stop	16	static
+../Core/Src/motor.c:102:6:move_abs_motor	16	static
