@@ -62,14 +62,6 @@ void delay_us(TIM_HandleTypeDef *htim_delay, uint32_t us);
 /* Private defines -----------------------------------------------------------*/
 #define ADC_MOTOR1_Pin GPIO_PIN_3
 #define ADC_MOTOR1_GPIO_Port GPIOA
-#define ADC_MOTOR2_Pin GPIO_PIN_4
-#define ADC_MOTOR2_GPIO_Port GPIOA
-#define MOT2_ENC_TIM2CH1_Pin GPIO_PIN_5
-#define MOT2_ENC_TIM2CH1_GPIO_Port GPIOA
-#define MOT2_PWM_TIM1CH1_Pin GPIO_PIN_9
-#define MOT2_PWM_TIM1CH1_GPIO_Port GPIOE
-#define MOT2_PWM_TIM1CH2_Pin GPIO_PIN_11
-#define MOT2_PWM_TIM1CH2_GPIO_Port GPIOE
 #define MOT1_PWM_TIM1CH3_Pin GPIO_PIN_13
 #define MOT1_PWM_TIM1CH3_GPIO_Port GPIOE
 #define MOT1_PWM_TIM1CH4_Pin GPIO_PIN_14
@@ -78,8 +70,6 @@ void delay_us(TIM_HandleTypeDef *htim_delay, uint32_t us);
 #define MOT1_ENC_TIM3CH1_GPIO_Port GPIOC
 #define MOT1_ENC_TIM3CH2_Pin GPIO_PIN_7
 #define MOT1_ENC_TIM3CH2_GPIO_Port GPIOC
-#define MOT2_ENC_TIM2CH2_Pin GPIO_PIN_3
-#define MOT2_ENC_TIM2CH2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
